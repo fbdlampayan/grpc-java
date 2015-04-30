@@ -54,47 +54,68 @@ def addLibraryIfNotLinked = { libName, argList ->
 }
 
 model {
-  toolChains {
-    gcc(Gcc) {
-      target("x86_64") {
-        cppCompiler.withArguments { args ->
-          args << "-m64"
-        }
-        linker.withArguments { args ->
-          args << "-m64"
-        }
+  if (System.getProperty('use.vc') != null) {
+    toolChains {
+      visualCpp(VisualCpp) {
       }
-      target("x86_32") {
-        cppCompiler.withArguments { args ->
-          args << "-m32"
-        }
-        linker.withArguments { args ->
-          args << "-m32"
-        }
+    }
+    platforms {
+      // VisualCpp supports 'x86' and 'amd64', but it builds 'x86' by default.
+      // Thus Protobuf is likely to have been built for x86. No matter what the
+      // detected architecture is, 'x86' is the safest target.
+      x86_32 {
+        architecture 'x86'
       }
-      target('local_arch') { }
-    }
-    clang(Clang) {
-      target("x86_64") {
-        cppCompiler.withArguments { args ->
-          args << "-m64"
-        }
-        linker.withArguments { args ->
-          args << "-m64"
-        }
+      x86_64 {
+        architecture 'x86'
       }
-      target('local_arch') { }
+      local_arch {
+        architecture 'x86'
+      }
     }
-  }
-  platforms {
-    x86_32 {
-      architecture "x86_32"
+  } else {
+    toolChains {
+      gcc(Gcc) {
+        target("x86_64") {
+          cppCompiler.withArguments { args ->
+            args << "-m64"
+          }
+          linker.withArguments { args ->
+            args << "-m64"
+          }
+        }
+        target("x86_32") {
+          cppCompiler.withArguments { args ->
+            args << "-m32"
+          }
+          linker.withArguments { args ->
+            args << "-m32"
+          }
+        }
+        target('local_arch') { }
+      }
+      clang(Clang) {
+        target("x86_64") {
+          cppCompiler.withArguments { args ->
+            args << "-m64"
+          }
+          linker.withArguments { args ->
+            args << "-m64"
+          }
+        }
+        target('local_arch') { }
+      }
     }
-    x86_64 {
-      architecture "x86_64"
-    }
-    local_arch {
-      architecture 'local_arch'
+    platforms {
+      x86_32 {
+        architecture "x86_32"
+      }
+      x86_64 {
+        architecture "x86_64"
+      }
+      local_arch {
+        architecture 'local_arch'
+      }
     }
   }
 
@@ -134,12 +155,12 @@ binaries.all {
     addEnvArgs("LDFLAGS", linker.args)
   } else if (toolChain in VisualCpp) {
     cppCompiler.args "/EHsc", "/MD"
-    if (rootProject.hasProperty('protobuf.include')) {
-      cppCompiler.args "/I" + rootProject.properties['protobuf.include']
+    if (rootProject.hasProperty('vc.protobuf.include')) {
+      cppCompiler.args "/I" + rootProject.properties['vc.protobuf.include']
     }
     linker.args "libprotobuf.lib", "libprotoc.lib"
-    if (rootProject.hasProperty('protobuf.libs')) {
-      linker.args "/LIBPATH:" + rootProject.properties['protobuf.libs']
+    if (rootProject.hasProperty('vc.protobuf.libs')) {
+      linker.args "/LIBPATH:" + rootProject.properties['vc.protobuf.libs']
     }
   }
 }
