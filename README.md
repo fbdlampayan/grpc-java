@@ -41,6 +41,8 @@ Now to build grpc-java itself:
 $ ./gradlew install
 ```
 
+### Notes on Visual C++
+
 When building on Windows and VC++, you need use the flag ``-Duse.vc`` and
 specify project properties for Gradle to find protobuf:
 ```
@@ -55,6 +57,10 @@ create %HOMEDRIVE%%HOMEPATH%\.gradle\gradle.properties with contents like:
 vc.protobuf.include=C:\\path\\to\\protobuf-3.0.0-alpha-2\\src
 vc.protobuf.libs=C:\\path\\to\\protobuf-3.0.0-alpha-2\\vsprojects\\Release
 ```
+
+The build script will build the codegen for the same architecture as the Java
+runtime installed on your system. If you are using 64-bit JVM, the codegen will
+be compiled for 64-bit, that means you must have compiled Protobuf in 64-bit.
 
 Navigating Around the Source
 ----------------------------

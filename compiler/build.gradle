@@ -53,67 +53,39 @@ def addLibraryIfNotLinked = { libName, argList ->
   }
 }
 
+def osdetectorArchToGradleArch = [
+  'x86_32' : 'x86',
+  'x86_64' : 'x86_64'
+]
+
 model {
-  if (System.getProperty('use.vc') != null) {
-    toolChains {
+  toolChains {
+    if (System.getProperty('use.vc') != null) {
       visualCpp(VisualCpp) {
       }
-    }
-    platforms {
-      // VisualCpp supports 'x86' and 'amd64', but it builds 'x86' by default.
-      // Thus Protobuf is likely to have been built for x86. No matter what the
-      // detected architecture is, 'x86' is the safest target.
-      x86_32 {
-        architecture 'x86'
-      }
-      x86_64 {
-        architecture 'x86'
-      }
-      local_arch {
-        architecture 'x86'
-      }
-    }
-  } else {
-    toolChains {
+    } else {
       gcc(Gcc) {
-        target("x86_64") {
-          cppCompiler.withArguments { args ->
-            args << "-m64"
-          }
-          linker.withArguments { args ->
-            args << "-m64"
-          }
-        }
-        target("x86_32") {
-          cppCompiler.withArguments { args ->
-            args << "-m32"
-          }
-          linker.withArguments { args ->
-            args << "-m32"
-          }
-        }
         target('local_arch') { }
       }
       clang(Clang) {
-        target("x86_64") {
-          cppCompiler.withArguments { args ->
-            args << "-m64"
-          }
-          linker.withArguments { args ->
-            args << "-m64"
-          }
-        }
         target('local_arch') { }
       }
     }
-    platforms {
-      x86_32 {
-        architecture "x86_32"
-      }
-      x86_64 {
-        architecture "x86_64"
-      }
-      local_arch {
+  }
+
+  platforms {
+    x86_32 {
+      architecture "x86"
+    }
+    x86_64 {
+      architecture "x86_64"
+    }
+    local_arch {
+      if (System.getProperty('use.vc') != null) {
+        // VisualCpp toolchain doesn't allow custom architecture, so we have to
+        // specify the exact built-in architecture.
+        architecture osdetectorArchToGradleArch[osdetector.arch]
+      } else {
         architecture 'local_arch'
       }
     }
