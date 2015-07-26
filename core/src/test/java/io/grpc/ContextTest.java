@@ -121,7 +121,7 @@ public class ContextTest {
   @Test
   public void rootCanBeAttached() {
     Context root = Context.current();
-    Context.CancellableContext fork = root.fork();
+    Context fork = root.fork();
     fork.attach();
     root.attach();
     assertTrue(root.isCurrent());
@@ -129,13 +129,6 @@ public class ContextTest {
     assertTrue(fork.isCurrent());
     fork.detach();
     assertTrue(root.isCurrent());
-  }
-
-  @Test
-  public void rootCanNeverHaveAListener() {
-    Context root = Context.current();
-    root.addListener(cancellationListener, MoreExecutors.directExecutor());
-    assertEquals(0, root.listenerCount());
   }
 
   @Test
@@ -282,6 +275,23 @@ public class ContextTest {
     assertNull(listenerNotifedContext);
     assertFalse(fork.isCancelled());
     assertEquals(1, fork.listenerCount());
+  }
+
+  @Test
+  public void removeListenerFromParentDoesNotRemove() {
+    Context.CancellableContext base = Context.current().withCancellation();
+    AtomicBoolean cancelled = new AtomicBoolean();
+    Context.CancellationListener listener = new Context.CancellationListener() {
+      @Override
+      public void cancelled(Context context) {
+        cancelled.set(true);
+      }
+    };
+    Context child = base.withValue(OBSERVED, "cat");
+    child.addListener(listener, MoreExecutors.directExecutor());
+    base.removeListener(listener);
+    assertTrue(base.cancel(null));
+    assertFalse(cancelled.get());
   }
 
   @Test

@@ -109,7 +109,7 @@ import javax.annotation.Nullable;
  * responsibility of the application to ensure that all contexts are properly cancelled.</li>
  * </ul>
  */
-public class Context {
+public abstract class Context {
 
   private static final Logger LOG = Logger.getLogger(Context.class.getName());
 
@@ -151,13 +151,11 @@ public class Context {
     }
   };
 
-  private static final Object[][] EMPTY_ENTRIES = new Object[0][2];
-
   /**
    * The logical root context which is {@link #current()} if no other context is bound. This context
    * is not cancellable and so will not cascade cancellation or retain listeners.
    */
-  public static final Context ROOT = new Context(null);
+  public static final Context ROOT = new RootContext();
 
   /**
    * Create a {@link Key} with the given name.
@@ -189,40 +187,8 @@ public class Context {
     return stack.peekLast();
   }
 
-  private final Context parent;
-  private final Object[][] keyValueEntries;
-  private final boolean cascadesCancellation;
-  private ArrayList<ExecutableListener> listeners;
-  private CancellationListener parentListener = new CancellationListener() {
-    @Override
-    public void cancelled(Context context) {
-      if (Context.this instanceof CancellableContext) {
-        // Record cancellation with its cause.
-        ((CancellableContext) Context.this).cancel(context.cause());
-      } else {
-        notifyAndClearListeners();
-      }
-    }
-  };
-
-  /**
-   * Construct a context that cannot be cancelled and will not cascade cancellation from its parent.
-   */
-  private Context(Context parent) {
-    this.parent = parent;
-    keyValueEntries = EMPTY_ENTRIES;
-    cascadesCancellation = false;
-  }
-
-  /**
-   * Construct a context that cannot be cancelled but will cascade cancellation from its parent if
-   * it is cancellable.
-   */
-  private Context(Context parent, Object[][] keyValueEntries) {
-    this.parent = parent;
-    this.keyValueEntries = keyValueEntries;
-    cascadesCancellation = true;
-  }
+  // Prevent initialization outside of this class.
+  Context() {}
 
   /**
    * Create a new context which is independently cancellable and also cascades cancellation from
@@ -305,38 +271,89 @@ public class Context {
    * </pre>
    *
    */
-  public <V> Context withValue(Key<V> k1, V v1) {
-    return new Context(this, new Object[][]{{k1, v1}});
+  public <V> Context withValue(final Key<V> k1, final V v1) {
+    Preconditions.checkNotNull(k1, "k1");
+    return new ChildContext(this) {
+      @Override
+      Object lookup(Key<?> key) {
+        if (key.equals(k1)) {
+          return v1;
+        }
+        return super.lookup(key);
+      }
+    };
   }
 
   /**
    * Create a new context with the given key value set. The new context will cascade cancellation
    * from its parent.
    */
-  public <V1, V2> Context withValues(Key<V1> k1, V1 v1, Key<V2> k2, V2 v2) {
-    return new Context(this, new Object[][]{{k1, v1}, {k2, v2}});
+  public <V1, V2> Context withValues(final Key<V1> k1, final V1 v1, final Key<V2> k2, final V2 v2) {
+    Preconditions.checkNotNull(k1, "k1");
+    Preconditions.checkNotNull(k2, "k2");
+    return new ChildContext(this) {
+      @Override
+      Object lookup(Key<?> key) {
+        if (key.equals(k1)) {
+          return v1;
+        }
+        if (key.equals(k2)) {
+          return v2;
+        }
+        return super.lookup(key);
+      }
+    };
   }
 
   /**
    * Create a new context with the given key value set. The new context will cascade cancellation
    * from its parent.
    */
-  public <V1, V2, V3> Context withValues(Key<V1> k1, V1 v1, Key<V2> k2, V2 v2, Key<V3> k3, V3 v3) {
-    return new Context(this, new Object[][]{{k1, v1}, {k2, v2}, {k3, v3}});
+  public <V1, V2, V3> Context withValues(final Key<V1> k1, final V1 v1, final Key<V2> k2,
+      final V2 v2, final Key<V3> k3, final V3 v3) {
+    Preconditions.checkNotNull(k1, "k1");
+    Preconditions.checkNotNull(k2, "k2");
+    Preconditions.checkNotNull(k3, "k3");
+    return new ChildContext(this) {
+      @Override
+      Object lookup(Key<?> key) {
+        if (key.equals(k1)) {
+          return v1;
+        }
+        if (key.equals(k2)) {
+          return v2;
+        }
+        if (key.equals(k3)) {
+          return v3;
+        }
+        return super.lookup(key);
+      }
+    };
   }
 
   /**
    * Create a new context which copies the values of this context but does not propagate its
-   * cancellation and is its own independent root for cancellation.
+   * cancellation.
    */
-  public CancellableContext fork() {
-    return new Context(this).withCancellation();
-  }
+  public Context fork() {
+    return new ChildContext(this) {
+      @Override
+      public boolean isCancelled() {
+        return false;
+      }
 
-  boolean canBeCancelled() {
-    // A context is cancellable if it cascades from its parent and its parent is
-    // cancellable.
-    return (cascadesCancellation && this.parent != null && this.parent.canBeCancelled());
+      @Override
+      public Throwable cause() {
+        return null;
+      }
+
+      @Override
+      void addListener0(Context context, CancellationListener cancellationListener,
+          Executor executor) {}
+
+      @Override
+      public void removeListener(CancellationListener cancellationListener) {}
+    };
   }
 
   /**
@@ -377,13 +394,7 @@ public class Context {
   /**
    * Is this context cancelled.
    */
-  public boolean isCancelled() {
-    if (parent == null || !cascadesCancellation) {
-      return false;
-    } else {
-      return parent.isCancelled();
-    }
-  }
+  public abstract boolean isCancelled();
 
   /**
    * If a context {@link #isCancelled()} then return the cause of the cancellation or
@@ -394,98 +405,24 @@ public class Context {
    * assume that it has already been handled and logged properly.
    */
   @Nullable
-  public Throwable cause() {
-    if (parent == null || !cascadesCancellation) {
-      return null;
-    } else {
-      return parent.cause();
-    }
-  }
+  public abstract Throwable cause();
 
   /**
    * Add a listener that will be notified when the context becomes cancelled.
    */
-  public void addListener(final CancellationListener cancellationListener,
-                          final Executor executor) {
+  public void addListener(CancellationListener cancellationListener, Executor executor) {
     Preconditions.checkNotNull(cancellationListener);
     Preconditions.checkNotNull(executor);
-    if (canBeCancelled()) {
-      ExecutableListener executableListener =
-          new ExecutableListener(executor, cancellationListener);
-      synchronized (this) {
-        if (isCancelled()) {
-          executableListener.deliver();
-        } else {
-          if (listeners == null) {
-            // Now that we have a listener we need to listen to our parent so
-            // we can cascade listener notification.
-            listeners = new ArrayList<ExecutableListener>();
-            listeners.add(executableListener);
-            parent.addListener(parentListener, MoreExecutors.directExecutor());
-          } else {
-            listeners.add(executableListener);
-          }
-        }
-      }
-    } else {
-      // Discussion point: Should we throw or suppress.
-    }
+    addListener0(this, cancellationListener, executor);
   }
+
+  abstract void addListener0(Context context, CancellationListener cancellationListener,
+      Executor executor);
 
   /**
    * Remove a {@link CancellationListener}.
    */
-  public void removeListener(CancellationListener cancellationListener) {
-    synchronized (this) {
-      if (listeners != null) {
-        for (int i = listeners.size() - 1; i >= 0; i--) {
-          if (listeners.get(i).listener == cancellationListener) {
-            listeners.remove(i);
-            // Just remove the first matching listener, given that we allow duplicate adds we should
-            // allow for duplicates after remove.
-            break;
-          }
-        }
-        // We have no listeners so no need to listen to our parent
-        if (listeners.isEmpty()) {
-          parent.removeListener(parentListener);
-          listeners = null;
-        }
-      }
-    }
-  }
-
-  /**
-   * Notify all listeners that this context has been cancelled and immediately release
-   * any reference to them so that they may be garbage collected.
-   */
-  void notifyAndClearListeners() {
-    ArrayList<ExecutableListener> tmpListeners;
-    synchronized (this) {
-      if (listeners == null) {
-        return;
-      }
-      tmpListeners = listeners;
-      listeners = null;
-    }
-    for (int i = 0; i < tmpListeners.size(); i++) {
-      try {
-        tmpListeners.get(i).deliver();
-      } catch (Throwable t) {
-        LOG.log(Level.INFO, "Exception notifying context listener", t);
-      }
-    }
-    parent.removeListener(parentListener);
-  }
-
-  // Used in tests to ensure that listeners are defined and released based on
-  // cancellation propagation. It's very important to ensure that we do not
-  // accidentally retain listeners.
-  int listenerCount() {
-    synchronized (this) {
-      return listeners == null ? 0 : listeners.size();
-    }
-  }
+  public abstract void removeListener(CancellationListener cancellationListener);
 
   /**
    * Wrap a {@link Runnable} so that it executes with this context as the {@link #current} context.
@@ -524,37 +461,95 @@ public class Context {
   /**
    * Lookup the value for a key in the context inheritance chain.
    */
-  private Object lookup(Key<?> key) {
-    for (int i = 0; i < keyValueEntries.length; i++) {
-      if (key.equals(keyValueEntries[i][0])) {
-        return keyValueEntries[i][1];
-      }
+  abstract Object lookup(Key<?> key);
+
+  private static final class RootContext extends Context {
+    @Override
+    public boolean isCancelled() {
+      return false;
     }
-    if (parent == null) {
+
+    @Override
+    public Throwable cause() {
       return null;
     }
-    return parent.lookup(key);
+
+    @Override
+    void addListener0(Context context, CancellationListener cancellationListener,
+        Executor executor) {}
+
+    @Override
+    public void removeListener(CancellationListener cancellationListener) {}
+
+    @Override
+    Object lookup(Key<?> key) {
+      return null;
+    }
+  }
+
+  private static class ChildContext extends Context {
+    private Context parent;
+
+    ChildContext(Context parent) {
+      this.parent = Preconditions.checkNotNull(parent);
+    }
+
+    @Override
+    public boolean isCancelled() {
+      return parent.isCancelled();
+    }
+
+    @Override
+    public Throwable cause() {
+      return parent.cause();
+    }
+
+    @Override
+    void addListener0(Context context, CancellationListener cancellationListener,
+        Executor executor) {
+      parent.addListener0(context, cancellationListener, executor);
+    }
+
+    @Override
+    public void removeListener(CancellationListener cancellationListener) {
+      parent.removeListener(cancellationListener);
+    }
+
+    @Override
+    Object lookup(Key<?> key) {
+      return parent.lookup(key);
+    }
   }
 
   /**
    * A context which inherits cancellation from its parent but which can also be independently
    * cancelled and which will propagate cancellation to its descendants.
    */
-  public static final class CancellableContext extends Context {
+  public static final class CancellableContext extends ChildContext {
 
     private boolean cancelled;
     private Throwable cause;
-    private final Context dummy;
+    /**
+     * A dummy that inherits from this to attach and detach so that you cannot retrieve a
+     * cancellable context from Context.current().
+     */
+    private final Context dummy = new ChildContext(this);
     private ScheduledFuture<?> scheduledFuture;
+    private ArrayList<ExecutableListener> listeners = new ArrayList<ExecutableListener>();
+    private final CancellationListener parentListener = new CancellationListener() {
+      @Override
+      public void cancelled(Context context) {
+        // Record cancellation with its cause.
+        cancel(CancellableContext.super.cause());
+      }
+    };
 
     /**
      * Create a cancellable context that does not have a deadline.
      */
     private CancellableContext(Context parent) {
-      super(parent, EMPTY_ENTRIES);
-      // Create a dummy that inherits from this to attach and detach so that you cannot retrieve a
-      // cancellable context from Context.current()
-      dummy = new Context(this, EMPTY_ENTRIES);
+      super(parent);
+      super.addListener(parentListener, MoreExecutors.directExecutor());
     }
 
     /**
@@ -587,7 +582,7 @@ public class Context {
     }
 
     @Override
-    public boolean isCurrent() {
+    boolean isCurrent() {
       return dummy.isCurrent();
     }
 
@@ -650,33 +645,86 @@ public class Context {
     }
 
     @Override
-    protected boolean canBeCancelled() {
-      return true;
-    }
-
-    @Override
     public boolean isCancelled() {
       synchronized (this) {
         if (cancelled) {
           return true;
         }
       }
-      // Detect cancellation of parent in the case where we have no listeners and
-      // record it.
-      if (super.isCancelled()) {
-        cancel(super.cause());
-        return true;
-      }
-      return false;
+      // Parent may have been cancelled but the cancellation listener not yet run.
+      return super.isCancelled();
     }
 
     @Nullable
     @Override
     public Throwable cause() {
-      if (isCancelled()) {
-        return cause;
+      synchronized (this) {
+        if (cancelled) {
+          return cause;
+        }
       }
-      return null;
+      // Parent may have been cancelled but the cancellation listener not yet run.
+      return super.cause();
+    }
+
+    @Override
+    void addListener0(Context context, CancellationListener cancellationListener,
+        Executor executor) {
+      ExecutableListener executableListener =
+          new ExecutableListener(context, executor, cancellationListener);
+      synchronized (this) {
+        if (isCancelled()) {
+          executableListener.deliver();
+        } else {
+          listeners.add(executableListener);
+        }
+      }
+    }
+
+    /**
+     * Notify all listeners that this context has been cancelled and immediately release
+     * any reference to them so that they may be garbage collected.
+     */
+    private void notifyAndClearListeners() {
+      ArrayList<ExecutableListener> tmpListeners;
+      synchronized (this) {
+        tmpListeners = listeners;
+        listeners = null;
+      }
+      for (int i = 0; i < tmpListeners.size(); i++) {
+        try {
+          tmpListeners.get(i).deliver();
+        } catch (Throwable t) {
+          LOG.log(Level.INFO, "Exception notifying context listener", t);
+        }
+      }
+      super.removeListener(parentListener);
+    }
+
+    // Used in tests to ensure that listeners are defined and released based on
+    // cancellation propagation. It's very important to ensure that we do not
+    // accidentally retain listeners.
+    int listenerCount() {
+      synchronized (this) {
+        return listeners == null ? 0 : listeners.size();
+      }
+    }
+
+    @Override
+    public void removeListener(CancellationListener cancellationListener) {
+      synchronized (this) {
+        if (listeners == null) {
+          return;
+        }
+        for (int i = listeners.size() - 1; i >= 0; i--) {
+          if (listeners.get(i).listener == cancellationListener) {
+            listeners.remove(i);
+            // Just remove the first matching listener, given that we allow duplicate adds we should
+            // allow for duplicates after remove.
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -745,13 +793,15 @@ public class Context {
   }
 
   /**
-   * Stores listener & executor pair.
+   * Stores original context, listener, and executor.
    */
-  private class ExecutableListener implements Runnable {
+  private static class ExecutableListener implements Runnable {
+    private final Context context;
     private final Executor executor;
     private final CancellationListener listener;
 
-    private ExecutableListener(Executor executor, CancellationListener listener) {
+    private ExecutableListener(Context context, Executor executor, CancellationListener listener) {
+      this.context = context;
       this.executor = executor;
       this.listener = listener;
     }
@@ -762,7 +812,7 @@ public class Context {
 
     @Override
     public void run() {
-      listener.cancelled(Context.this);
+      listener.cancelled(context);
     }
   }
 }
