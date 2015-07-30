@@ -225,15 +225,15 @@ public class ContextTest {
   }
 
   @Test
-  public void cascadingCancellationNotifiesChild() {
+  public void cascadingCancellationNotifiesChildren() {
     // Root is not cancellable so we can't cascade from it
     Context.CancellableContext base = Context.current().withCancellation();
     assertEquals(0, base.listenerCount());
     Context child = base.withValue(FOOD, "lasagna");
-    assertEquals(0, child.listenerCount());
+    assertEquals(0, base.listenerCount());
     child.addListener(cancellationListener, MoreExecutors.directExecutor());
-    assertEquals(1, child.listenerCount());
-    assertEquals(1, base.listenerCount()); // child is now listening to base
+    // FIXME add another listener
+    assertEquals(1, base.listenerCount());
     assertFalse(base.isCancelled());
     assertFalse(child.isCancelled());
     IllegalStateException cause = new IllegalStateException();
@@ -244,7 +244,6 @@ public class ContextTest {
     assertTrue(child.isCancelled());
     assertSame(cause, child.cause());
     assertEquals(0, base.listenerCount());
-    assertEquals(0, child.listenerCount());
   }
 
   @Test
