@@ -56,6 +56,7 @@ public class HelloworldActivity extends ActionBarActivity {
     private EditText mPortEdit;
     private EditText mMessageEdit;
     private TextView mResultText;
+    private HelloWorldServer server = new HelloWorldServer();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +67,18 @@ public class HelloworldActivity extends ActionBarActivity {
         mPortEdit = (EditText) findViewById(R.id.port_edit_text);
         mMessageEdit = (EditText) findViewById(R.id.message_edit_text);
         mResultText = (TextView) findViewById(R.id.grpc_response_text);
+
+        try {
+            server.start();
+        } catch (java.io.IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        server.stop();
     }
 
     public void sendMessage(View view) {

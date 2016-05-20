@@ -1,3 +1,6 @@
+plugins {
+    id "be.insaneprogramming.gradle.animalsniffer" version "1.4.0"
+}
 description = "gRPC: Netty"
 dependencies {
     compile project(':grpc-core'),
@@ -12,4 +15,8 @@ test {
     jvmArgs "-javaagent:" + configurations.alpnagent.asPath
 }
 
+animalsniffer {
+    signature = "org.codehaus.mojo.signature:java16:+@signature"
+    ignores = ["javax.net.ssl.SSLParameters"]
+}
 javadoc.options.links 'http://netty.io/4.1/api/'
