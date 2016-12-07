@@ -13,14 +13,17 @@ buildscript {
 
 def subprojects = [
   project(':grpc-auth'),
-  project(':grpc-core'),
   project(':grpc-context'),
+  project(':grpc-core'),
+  project(':grpc-grpclb'),
   project(':grpc-netty'),
   project(':grpc-okhttp'),
   project(':grpc-protobuf'),
   project(':grpc-protobuf-lite'),
   project(':grpc-protobuf-nano'),
+  project(':grpc-services'),
   project(':grpc-stub'),
+  project(':grpc-testing'),
   project(':grpc-thrift'),
 ]
 
