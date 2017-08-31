@@ -107,11 +107,19 @@ task compressingHelloWorldClient(type: CreateStartScripts) {
   classpath = jar.outputs.files + project.configurations.runtime
 }
 
+task grpcProxy(type: CreateStartScripts) {
+  mainClassName = 'io.grpc.examples.grpcproxy.GrpcProxy'
+  applicationName = 'grpc-proxy'
+  outputDir = new File(project.buildDir, 'tmp')
+  classpath = jar.outputs.files + project.configurations.runtime
+}
+
 applicationDistribution.into('bin') {
   from(routeGuideServer)
   from(routeGuideClient)
   from(helloWorldServer)
   from(helloWorldClient)
   from(compressingHelloWorldClient)
+  from(grpcProxy)
   fileMode = 0755
 }
