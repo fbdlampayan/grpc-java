@@ -352,6 +352,7 @@ public class OkHttpChannelBuilder extends
 
             } else {
               sslContext = SSLContext.getInstance("Default", Platform.get().getProvider());
+              sslContext.init(null, trustManagers, null);
             }
             sslSocketFactory = sslContext.getSocketFactory();
           }
