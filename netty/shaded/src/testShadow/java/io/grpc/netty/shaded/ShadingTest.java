@@ -22,7 +22,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
@@ -89,7 +88,8 @@ public final class ShadingTest {
   @Test
   public void tcnative() throws Exception {
     server = NettyServerBuilder.forPort(0)
-        .useTransportSecurity(TestUtils.loadCert("server1.pem"), TestUtils.loadCert("server1.key"))
+        .useTransportSecurity(
+            TlsTesting.loadCert("server1.pem"), TlsTesting.loadCert("server1.key"))
         .addService(new SimpleServiceImpl())
         .build().start();
     channel = NettyChannelBuilder
