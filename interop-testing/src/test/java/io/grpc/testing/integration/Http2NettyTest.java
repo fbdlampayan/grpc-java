@@ -25,6 +25,7 @@ import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.NettyServerBuilder;
+import io.grpc.testing.TlsTesting;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import java.io.IOException;
@@ -48,9 +49,9 @@ public class Http2NettyTest extends AbstractInteropTest {
           .flowControlWindow(65 * 1024)
           .maxMessageSize(AbstractInteropTest.MAX_MESSAGE_SIZE)
           .sslContext(GrpcSslContexts
-              .forServer(TestUtils.loadCert("server1.pem"), TestUtils.loadCert("server1.key"))
+              .forServer(TlsTesting.loadCert("server1.pem"), TlsTesting.loadCert("server1.key"))
               .clientAuth(ClientAuth.REQUIRE)
-              .trustManager(TestUtils.loadCert("ca.pem"))
+              .trustManager(TlsTesting.loadCert("ca.pem"))
               .ciphers(TestUtils.preferredTestCiphers(), SupportedCipherSuiteFilter.INSTANCE)
               .build());
     } catch (IOException ex) {
@@ -67,7 +68,7 @@ public class Http2NettyTest extends AbstractInteropTest {
           .maxInboundMessageSize(AbstractInteropTest.MAX_MESSAGE_SIZE)
           .sslContext(GrpcSslContexts
               .forClient()
-              .keyManager(TestUtils.loadCert("client.pem"), TestUtils.loadCert("client.key"))
+              .keyManager(TlsTesting.loadCert("client.pem"), TlsTesting.loadCert("client.key"))
               .trustManager(TestUtils.loadX509Cert("ca.pem"))
               .ciphers(TestUtils.preferredTestCiphers(), SupportedCipherSuiteFilter.INSTANCE)
               .build());

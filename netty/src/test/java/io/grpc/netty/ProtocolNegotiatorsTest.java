@@ -29,6 +29,7 @@ import static org.mockito.Mockito.times;
 import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.ProtocolNegotiators.ServerTlsHandler;
 import io.grpc.netty.ProtocolNegotiators.TlsNegotiator;
+import io.grpc.testing.TlsTesting;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -49,7 +50,7 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
-import java.io.File;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.logging.Filter;
@@ -90,8 +91,8 @@ public class ProtocolNegotiatorsTest {
 
   @Before
   public void setUp() throws Exception {
-    File serverCert = TestUtils.loadCert("server1.pem");
-    File key = TestUtils.loadCert("server1.key");
+    InputStream serverCert = TlsTesting.loadCert("server1.pem");
+    InputStream key = TlsTesting.loadCert("server1.key");
     sslContext = GrpcSslContexts.forServer(serverCert, key)
         .ciphers(TestUtils.preferredTestCiphers(), SupportedCipherSuiteFilter.INSTANCE).build();
     engine = SSLContext.getDefault().createSSLEngine();

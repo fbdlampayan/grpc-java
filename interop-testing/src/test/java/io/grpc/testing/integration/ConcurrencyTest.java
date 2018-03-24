@@ -26,14 +26,15 @@ import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import io.grpc.testing.TlsTesting;
 import io.grpc.testing.integration.Messages.PayloadType;
 import io.grpc.testing.integration.Messages.ResponseParameters;
 import io.grpc.testing.integration.Messages.StreamingOutputCallRequest;
 import io.grpc.testing.integration.Messages.StreamingOutputCallResponse;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CountDownLatch;
@@ -187,14 +188,14 @@ public class ConcurrencyTest {
    * Creates and starts a new {@link TestServiceImpl} server.
    */
   private Server newServer() throws CertificateException, IOException {
-    File serverCertChainFile = TestUtils.loadCert("server1.pem");
-    File serverPrivateKeyFile = TestUtils.loadCert("server1.key");
+    InputStream serverCertChain = TlsTesting.loadCert("server1.pem");
+    InputStream serverPrivateKey = TlsTesting.loadCert("server1.key");
     X509Certificate[] serverTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
 
     SslContext sslContext =
-        GrpcSslContexts.forServer(serverCertChainFile, serverPrivateKeyFile)
+        GrpcSslContexts.forServer(serverCertChain, serverPrivateKey)
                        .trustManager(serverTrustedCaCerts)
                        .clientAuth(ClientAuth.REQUIRE)
                        .build();
@@ -207,15 +208,15 @@ public class ConcurrencyTest {
   }
 
   private ManagedChannel newClientChannel() throws CertificateException, IOException {
-    File clientCertChainFile = TestUtils.loadCert("client.pem");
-    File clientPrivateKeyFile = TestUtils.loadCert("client.key");
+    InputStream clientCertChain = TlsTesting.loadCert("client.pem");
+    InputStream clientPrivateKey = TlsTesting.loadCert("client.key");
     X509Certificate[] clientTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
 
     SslContext sslContext =
         GrpcSslContexts.forClient()
-                       .keyManager(clientCertChainFile, clientPrivateKeyFile)
+                       .keyManager(clientCertChain, clientPrivateKey)
                        .trustManager(clientTrustedCaCerts)
                        .build();
 

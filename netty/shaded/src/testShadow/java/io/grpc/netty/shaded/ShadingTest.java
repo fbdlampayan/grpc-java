@@ -29,6 +29,7 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
 import io.grpc.stub.StreamObserver;
+import io.grpc.testing.TlsTesting;
 import io.grpc.testing.protobuf.SimpleRequest;
 import io.grpc.testing.protobuf.SimpleResponse;
 import io.grpc.testing.protobuf.SimpleServiceGrpc;
@@ -95,7 +96,7 @@ public final class ShadingTest {
         .forAddress("localhost", server.getPort())
         .sslContext(
             GrpcSslContexts.configure(SslContextBuilder.forClient(), SslProvider.OPENSSL)
-                .trustManager(TestUtils.loadCert("ca.pem")).build())
+                .trustManager(TlsTesting.loadCert("ca.pem")).build())
         .overrideAuthority("foo.test.google.fr")
         .build();
     SimpleServiceBlockingStub stub = SimpleServiceGrpc.newBlockingStub(channel);

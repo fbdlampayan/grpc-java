@@ -24,6 +24,7 @@ import io.grpc.alts.AltsServerBuilder;
 import io.grpc.internal.testing.TestUtils;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyServerBuilder;
+import io.grpc.testing.TlsTesting;
 import io.netty.handler.ssl.SslContext;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -141,7 +142,7 @@ public class TestServiceServer {
       if (useTls) {
         sslContext =
             GrpcSslContexts.forServer(
-                    TestUtils.loadCert("server1.pem"), TestUtils.loadCert("server1.key"))
+                    TlsTesting.loadCert("server1.pem"), TlsTesting.loadCert("server1.key"))
                 .build();
       }
       server =

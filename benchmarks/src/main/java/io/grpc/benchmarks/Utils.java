@@ -32,6 +32,7 @@ import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
+import io.grpc.testing.TlsTesting;
 import io.netty.channel.epoll.EpollDomainSocketChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -42,6 +43,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -138,7 +140,7 @@ public final class Utils {
     if (!tls) {
       builder.usePlaintext();
     } else if (testca) {
-      File cert = TestUtils.loadCert("ca.pem");
+      InputStream cert = TlsTesting.loadCert("ca.pem");
       builder.sslContext(GrpcSslContexts.forClient().trustManager(cert).build());
     }
 

@@ -28,6 +28,7 @@ import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
+import io.grpc.testing.TlsTesting;
 import io.netty.handler.ssl.SslContext;
 import java.io.File;
 import java.io.FileInputStream;
@@ -335,7 +336,7 @@ public class TestServiceClient {
         if (useTestCa) {
           try {
             sslContext = GrpcSslContexts.forClient().trustManager(
-                    TestUtils.loadCert("ca.pem")).build();
+                    TlsTesting.loadCert("ca.pem")).build();
           } catch (Exception ex) {
             throw new RuntimeException(ex);
           }

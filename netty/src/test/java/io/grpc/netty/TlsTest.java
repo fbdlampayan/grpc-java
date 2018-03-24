@@ -28,6 +28,7 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.internal.testing.TestUtils;
 import io.grpc.stub.StreamObserver;
+import io.grpc.testing.TlsTesting;
 import io.grpc.testing.protobuf.SimpleRequest;
 import io.grpc.testing.protobuf.SimpleResponse;
 import io.grpc.testing.protobuf.SimpleServiceGrpc;
@@ -36,8 +37,8 @@ import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.Security;
@@ -149,24 +150,24 @@ public class TlsTest {
   @Test
   public void basicClientServerIntegrationTest() throws Exception {
     // Create & start a server.
-    File serverCertFile = TestUtils.loadCert("server1.pem");
-    File serverPrivateKeyFile = TestUtils.loadCert("server1.key");
+    InputStream serverCert = TlsTesting.loadCert("server1.pem");
+    InputStream serverPrivateKey = TlsTesting.loadCert("server1.key");
     X509Certificate[] serverTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
-    server = serverBuilder(0, serverCertFile, serverPrivateKeyFile, serverTrustedCaCerts)
+    server = serverBuilder(0, serverCert, serverPrivateKey, serverTrustedCaCerts)
         .addService(new SimpleServiceImpl())
         .build()
         .start();
 
     // Create a client.
-    File clientCertChainFile = TestUtils.loadCert("client.pem");
-    File clientPrivateKeyFile = TestUtils.loadCert("client.key");
+    InputStream clientCertChain = TlsTesting.loadCert("client.pem");
+    InputStream clientPrivateKey = TlsTesting.loadCert("client.key");
     X509Certificate[] clientTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
     channel = clientChannel(server.getPort(), clientContextBuilder
-        .keyManager(clientCertChainFile, clientPrivateKeyFile)
+        .keyManager(clientCertChain, clientPrivateKey)
         .trustManager(clientTrustedCaCerts)
         .build());
     SimpleServiceGrpc.SimpleServiceBlockingStub client = SimpleServiceGrpc.newBlockingStub(channel);
@@ -184,12 +185,12 @@ public class TlsTest {
   @Test
   public void serverRejectsUntrustedClientCert() throws Exception {
     // Create & start a server. It requires client authentication and trusts only the test CA.
-    File serverCertFile = TestUtils.loadCert("server1.pem");
-    File serverPrivateKeyFile = TestUtils.loadCert("server1.key");
+    InputStream serverCert = TlsTesting.loadCert("server1.pem");
+    InputStream serverPrivateKey = TlsTesting.loadCert("server1.key");
     X509Certificate[] serverTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
-    server = serverBuilder(0, serverCertFile, serverPrivateKeyFile, serverTrustedCaCerts)
+    server = serverBuilder(0, serverCert, serverPrivateKey, serverTrustedCaCerts)
         .addService(new SimpleServiceImpl())
         .build()
         .start();
@@ -197,13 +198,13 @@ public class TlsTest {
     // Create a client. Its credentials come from a CA that the server does not trust. The client
     // trusts both test CAs, so we can be sure that the handshake failure is due to the server
     // rejecting the client's cert, not the client rejecting the server's cert.
-    File clientCertChainFile = TestUtils.loadCert("badclient.pem");
-    File clientPrivateKeyFile = TestUtils.loadCert("badclient.key");
+    InputStream clientCertChain = TlsTesting.loadCert("badclient.pem");
+    InputStream clientPrivateKey = TlsTesting.loadCert("badclient.key");
     X509Certificate[] clientTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
     channel = clientChannel(server.getPort(), clientContextBuilder
-        .keyManager(clientCertChainFile, clientPrivateKeyFile)
+        .keyManager(clientCertChain, clientPrivateKey)
         .trustManager(clientTrustedCaCerts)
         .build());
     SimpleServiceGrpc.SimpleServiceBlockingStub client = SimpleServiceGrpc.newBlockingStub(channel);
@@ -230,12 +231,12 @@ public class TlsTest {
   @Test
   public void noClientAuthFailure() throws Exception {
     // Create & start a server.
-    File serverCertFile = TestUtils.loadCert("server1.pem");
-    File serverPrivateKeyFile = TestUtils.loadCert("server1.key");
+    InputStream serverCert = TlsTesting.loadCert("server1.pem");
+    InputStream serverPrivateKey = TlsTesting.loadCert("server1.key");
     X509Certificate[] serverTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
-    server = serverBuilder(0, serverCertFile, serverPrivateKeyFile, serverTrustedCaCerts)
+    server = serverBuilder(0, serverCert, serverPrivateKey, serverTrustedCaCerts)
         .addService(new SimpleServiceImpl())
         .build()
         .start();
@@ -271,24 +272,24 @@ public class TlsTest {
   @Test
   public void clientRejectsUntrustedServerCert() throws Exception {
     // Create & start a server.
-    File serverCertFile = TestUtils.loadCert("badserver.pem");
-    File serverPrivateKeyFile = TestUtils.loadCert("badserver.key");
+    InputStream serverCert = TlsTesting.loadCert("badserver.pem");
+    InputStream serverPrivateKey = TlsTesting.loadCert("badserver.key");
     X509Certificate[] serverTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
-    server = serverBuilder(0, serverCertFile, serverPrivateKeyFile, serverTrustedCaCerts)
+    server = serverBuilder(0, serverCert, serverPrivateKey, serverTrustedCaCerts)
         .addService(new SimpleServiceImpl())
         .build()
         .start();
 
     // Create a client.
-    File clientCertChainFile = TestUtils.loadCert("client.pem");
-    File clientPrivateKeyFile = TestUtils.loadCert("client.key");
+    InputStream clientCertChain = TlsTesting.loadCert("client.pem");
+    InputStream clientPrivateKey = TlsTesting.loadCert("client.key");
     X509Certificate[] clientTrustedCaCerts = {
       TestUtils.loadX509Cert("ca.pem")
     };
     channel = clientChannel(server.getPort(), clientContextBuilder
-        .keyManager(clientCertChainFile, clientPrivateKeyFile)
+        .keyManager(clientCertChain, clientPrivateKey)
         .trustManager(clientTrustedCaCerts)
         .build());
     SimpleServiceGrpc.SimpleServiceBlockingStub client = SimpleServiceGrpc.newBlockingStub(channel);
@@ -309,10 +310,10 @@ public class TlsTest {
   }
 
 
-  private ServerBuilder<?> serverBuilder(int port, File serverCertChainFile,
-      File serverPrivateKeyFile, X509Certificate[] serverTrustedCaCerts) throws IOException {
+  private ServerBuilder<?> serverBuilder(int port, InputStream serverCertChain,
+      InputStream serverPrivateKey, X509Certificate[] serverTrustedCaCerts) throws IOException {
     SslContextBuilder sslContextBuilder
-        = SslContextBuilder.forServer(serverCertChainFile, serverPrivateKeyFile);
+        = SslContextBuilder.forServer(serverCertChain, serverPrivateKey);
     if (sslProvider == SslProvider.JDK) {
       GrpcSslContexts.configure(sslContextBuilder, jdkProvider);
     } else {

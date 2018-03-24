@@ -34,6 +34,7 @@ import io.grpc.netty.NettyServerBuilder;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
 import io.grpc.stub.StreamObserver;
+import io.grpc.testing.TlsTesting;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -74,7 +75,7 @@ public class Http2OkHttpTest extends AbstractInteropTest {
         sslProvider = SslProvider.JDK;
       }
       SslContextBuilder contextBuilder = SslContextBuilder
-          .forServer(TestUtils.loadCert("server1.pem"), TestUtils.loadCert("server1.key"));
+          .forServer(TlsTesting.loadCert("server1.pem"), TlsTesting.loadCert("server1.key"));
       GrpcSslContexts.configure(contextBuilder, sslProvider);
       contextBuilder.ciphers(TestUtils.preferredTestCiphers(), SupportedCipherSuiteFilter.INSTANCE);
       return NettyServerBuilder.forPort(0)
